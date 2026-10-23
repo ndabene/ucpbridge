@@ -208,6 +208,10 @@ class UcpBridgeConfigPage
     private function render()
     {
         $base = $this->context->link->getBaseLink();
+        $keys = UcpBridgeApiKeys::all();
+        foreach ($keys as $id => $key) {
+            unset($keys[$id]['key']);
+        }
 
         return $this->fetch('intro.tpl', [
                 'ucp_name' => Ucpbridge::DISPLAY_NAME,
@@ -216,7 +220,7 @@ class UcpBridgeConfigPage
                 'ucp_mcp' => $base . 'ucp/v1/mcp',
             ])
             . $this->settingsForm()
-            . $this->fetch('api_keys.tpl', ['ucp_keys' => UcpBridgeApiKeys::all(), 'ucp_csrf' => $this->token()])
+            . $this->fetch('api_keys.tpl', ['ucp_keys' => $keys, 'ucp_csrf' => $this->token()])
             . $this->addPlatformForm()
             . $this->fetch('grants.tpl', ['ucp_grants' => UcpBridgeOAuth::grants(), 'ucp_csrf' => $this->token()])
             . $this->fetch('evidence.tpl', [
