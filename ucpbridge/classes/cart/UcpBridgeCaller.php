@@ -23,6 +23,9 @@ class UcpBridgeCaller
     /**
      * Cloisonnement strict : un panier, une session ou une commande n'est lisible et modifiable que par l'appelant
      * qui l'a créé (même plateforme, ou même client OAuth et même client final). Aucune ressource « ouverte à tous ».
+     *
+     * @param array<string, mixed> $s Session portant l'identifiant de son propriétaire.
+     * @return bool L'appelant courant possède cette session.
      */
     public function owns(array $s)
     {

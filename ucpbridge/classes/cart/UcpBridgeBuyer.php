@@ -22,7 +22,12 @@ class UcpBridgeBuyer
         $this->caller = $caller;
     }
 
-    /** Rattache le panier au vrai client : identité, adresse enregistrée proposée par défaut. */
+    /**
+     * Rattache le panier au client authentifié et propose son adresse enregistrée.
+     *
+     * @param array<string, mixed> $s Session modifiée par référence.
+     * @return void
+     */
     public function attachUser(array &$s, Cart $cart)
     {
         $c = new Customer($this->caller->idUser);
@@ -57,6 +62,12 @@ class UcpBridgeBuyer
         Cart::resetStaticCache();
     }
 
+    /**
+     * Synchronise le client avec l'identité de la session ; crée un invité si aucun client n'y est lié.
+     *
+     * @param array<string, mixed> $s Session modifiée par référence.
+     * @return void
+     */
     public function syncCustomer(array &$s, Cart $cart)
     {
         $b = $s['payload']['buyer'] ?? [];
@@ -97,6 +108,7 @@ class UcpBridgeBuyer
         $this->context->customer = $c;
     }
 
+    /** @return string Nom nettoyé et limité à 255 caractères, avec valeur de repli. */
     public static function cleanName($n)
     {
         $n = trim(preg_replace('/[0-9!<>,;?=+()@#"°{}_$%:]/u', '', (string) $n));
@@ -104,7 +116,13 @@ class UcpBridgeBuyer
         return '' !== $n ? Tools::substr($n, 0, 255) : 'Client';
     }
 
-    /** Options newsletter et partenaires du client PrestaShop, uniquement sur consentement explicite. */
+    /**
+     * Enregistre les options newsletter et partenaires uniquement sur consentement explicite.
+     *
+     * @param int $idCustomer Identifiant du client PrestaShop.
+     * @param array<string, mixed> $consent Consentements fournis lors de la caisse.
+     * @return void
+     */
     public function applyConsent($idCustomer, array $consent)
     {
         $data = [];

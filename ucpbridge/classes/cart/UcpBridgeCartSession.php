@@ -49,6 +49,12 @@ class UcpBridgeCartSession
             Ucpbridge::UCP_VERSION);
     }
 
+    /**
+     * Crée un panier UCP et sa session persistée à partir des lignes demandées.
+     *
+     * @param array<string, mixed> $body Corps de la requête UCP.
+     * @return array{int, array<string, mixed>} Code HTTP et document UCP.
+     */
     public function createCart(array $body)
     {
         list($lines, $errors) = $this->lines->resolveLines($body['line_items'] ?? null);
@@ -81,7 +87,12 @@ class UcpBridgeCartSession
         return [201, $this->cartDoc($s, $msgs)];
     }
 
-    /** Détail d'un produit (get_product) : produit et toutes ses variantes. */
+    /**
+     * Détail d'un produit (get_product) : produit et toutes ses variantes.
+     *
+     * @param string $id Identifiant de produit UCP.
+     * @return array<string, mixed> Produit UCP ou document d'erreur.
+     */
     public function productDoc($id)
     {
         $idProduct = $this->catalog->productIdFor($id);
@@ -95,6 +106,13 @@ class UcpBridgeCartSession
         ];
     }
 
+    /**
+     * Construit le document du panier à partir de l'état réel de PrestaShop.
+     *
+     * @param array<string, mixed> $s Session de panier.
+     * @param list<array<string, mixed>>|null $msgs Messages UCP supplémentaires.
+     * @return array<string, mixed> Document de panier UCP.
+     */
     public function cartDoc(array $s, $msgs = null)
     {
         if ('handed_off' === $s['status']) {
@@ -139,6 +157,13 @@ class UcpBridgeCartSession
             . 'il ne peut plus être modifié par l\'API', 'unrecoverable');
     }
 
+    /**
+     * Remplace les lignes du panier et enregistre la session modifiée.
+     *
+     * @param array<string, mixed> $s Session de panier courante.
+     * @param array<string, mixed> $body Corps de la requête UCP.
+     * @return array{int, array<string, mixed>} Code HTTP et document UCP.
+     */
     public function updateCart(array $s, array $body)
     {
         if ('handed_off' === $s['status']) {
@@ -186,6 +211,12 @@ class UcpBridgeCartSession
         return [200, $this->cartDoc($s, $msgs)];
     }
 
+    /**
+     * Annule une session de panier selon son état courant.
+     *
+     * @param array<string, mixed> $s Session de panier courante.
+     * @return array{int, array<string, mixed>} Code HTTP et document UCP.
+     */
     public function cancelCart(array $s)
     {
         $s['status'] = 'canceled';

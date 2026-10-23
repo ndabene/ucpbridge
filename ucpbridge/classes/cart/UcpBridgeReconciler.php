@@ -36,7 +36,8 @@ class UcpBridgeReconciler
      * session rendue finalisable. Lancé par bin/reconcile.php (ligne de commande, tâche planifiée) ou par le bouton
      * de la configuration du module.
      *
-     * @return array liste de [id_session, action]
+     * @param int $minutes Âge minimal des sessions en cours, en minutes.
+     * @return list<array{string, string}> Couples [id_session, action] des sessions traitées.
      */
     public function reconcile($minutes = 15)
     {
@@ -62,6 +63,13 @@ class UcpBridgeReconciler
         return $done;
     }
 
+    /**
+     * Détermine l'issue d'une session réservée pour rapprochement.
+     *
+     * @param array<string, mixed> $s Session réservée.
+     * @param string $was Statut antérieur à la réservation.
+     * @return string Action effectuée, destinée au rapport de rapprochement.
+     */
     private function reconcileOne(array $s, $was)
     {
         $id = $s['id_session'];

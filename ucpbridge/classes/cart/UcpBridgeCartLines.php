@@ -26,7 +26,8 @@ class UcpBridgeCartLines
     /**
      * Valide et résout les line_items demandés.
      *
-     * @return array [lignes résolues, messages d'erreur]
+     * @param mixed $lineItems Lignes de la requête à valider et résoudre.
+     * @return array{list<array<string, mixed>>, list<array<string, mixed>>} Lignes résolues et messages d'erreur UCP.
      */
     public function resolveLines($lineItems)
     {
@@ -67,6 +68,7 @@ class UcpBridgeCartLines
         return [$lines, $errors];
     }
 
+    /** @return Cart Nouveau panier PrestaShop enregistré. */
     public function newPsCart()
     {
         $cart = new Cart();
@@ -82,7 +84,12 @@ class UcpBridgeCartLines
         return $cart;
     }
 
-    /** Remplace intégralement le contenu du panier PrestaShop (sémantique UCP : full replacement). */
+    /**
+     * Remplace intégralement le contenu du panier PrestaShop (sémantique UCP : full replacement).
+     *
+     * @param list<array<string, mixed>> $lines Lignes résolues par resolveLines().
+     * @return bool Succès de l'ajout de toutes les lignes au panier.
+     */
     public function fillCart(Cart $cart, array $lines)
     {
         $this->context->cart = $cart;
@@ -109,7 +116,12 @@ class UcpBridgeCartLines
         }
     }
 
-    /** Lignes UCP à partir du panier PrestaShop réel (prix TTC de la déclinaison, prix spécifiques inclus). */
+    /**
+     * Lignes UCP à partir du panier réel (prix TTC de la déclinaison, prix spécifiques inclus).
+     *
+     * @param list<array<string, mixed>> $lines Lignes résolues conservant les identifiants demandés.
+     * @return list<array<string, mixed>> Lignes UCP et leurs prix.
+     */
     public function renderLines(Cart $cart, array $lines)
     {
         $byKey = [];
@@ -150,12 +162,18 @@ class UcpBridgeCartLines
         return $out;
     }
 
+    /** @return int Montant arrondi en centimes. */
     public static function cents($v)
     {
         return (int) round(((float) $v) * 100);
     }
 
-    /** Lignes du panier PrestaShop cohérentes avec celles de la session (chaque ligne présente, quantité suffisante). */
+    /**
+     * Vérifie les lignes du panier réel contre la session (présence et quantité suffisante).
+     *
+     * @param array<string, mixed> $s Session contenant les lignes attendues.
+     * @return bool Cohérence du panier avec les lignes de la session.
+     */
     public function cartMatchesSession(array $s, Cart $cart)
     {
         $qty = [];

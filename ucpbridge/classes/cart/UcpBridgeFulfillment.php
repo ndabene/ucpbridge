@@ -22,6 +22,13 @@ class UcpBridgeFulfillment
         $this->lines = $lines;
     }
 
+    /**
+     * Valide l'adresse de livraison et la rattache au panier et à la session.
+     *
+     * @param array<string, mixed> $s Session modifiée par référence.
+     * @param array<string, mixed> $d Destination UCP demandée.
+     * @return array<string, mixed>|null Message d'erreur UCP ou null en cas de succès.
+     */
     public function applyDestination(array &$s, Cart $cart, array $d)
     {
         foreach (['street_address', 'address_locality', 'postal_code', 'address_country'] as $f) {
@@ -79,7 +86,11 @@ class UcpBridgeFulfillment
         return null;
     }
 
-    /** Transporteurs réels de PrestaShop pour l'adresse du panier, prix TTC. */
+    /**
+     * Transporteurs réels de PrestaShop pour l'adresse du panier, prix TTC.
+     *
+     * @return array<string, array<string, mixed>> Options indexées par leur identifiant UCP.
+     */
     public function carrierOptions(Cart $cart)
     {
         if (!$cart->id_address_delivery) {
@@ -108,6 +119,13 @@ class UcpBridgeFulfillment
         return $out;
     }
 
+    /**
+     * Applique un transporteur disponible au panier et à la session.
+     *
+     * @param array<string, mixed> $s Session modifiée par référence.
+     * @param string $optionId Identifiant de l'option de livraison UCP.
+     * @return array<string, mixed>|null Message d'erreur UCP ou null en cas de succès.
+     */
     public function applyCarrier(array &$s, Cart $cart, $optionId)
     {
         if (!$cart->id_address_delivery) {

@@ -25,6 +25,11 @@ class UcpBridgeCheckoutStatus
         $this->fulfillment = $fulfillment;
     }
 
+    /**
+     * Recense les champs qui empêchent la finalisation de la caisse.
+     *
+     * @return list<array<string, mixed>> Messages d'erreur UCP des champs manquants.
+     */
     public function missing(array $s, Cart $cart)
     {
         $m = [];
@@ -47,6 +52,7 @@ class UcpBridgeCheckoutStatus
         return $m;
     }
 
+    /** @return string Statut interne déduit du panier et des champs manquants. */
     public function computeStatus(array $s, Cart $cart)
     {
         if (in_array($s['status'], UcpBridgeSessionStore::LOCKED, true)
@@ -60,7 +66,11 @@ class UcpBridgeCheckoutStatus
         return $this->needsTermsReview($s) ? 'requires_escalation' : 'ready_for_complete';
     }
 
-    /** Option « relecture des CGV chez le marchand » active et CGV pas encore acceptées. */
+    /**
+     * Vérifie si l'acheteur doit relire les CGV chez le marchand.
+     *
+     * @return bool Option active et CGV pas encore acceptées.
+     */
     public function needsTermsReview(array $s)
     {
         return $this->module->termsReviewRequired() && empty($s['payload']['terms_acceptance']);

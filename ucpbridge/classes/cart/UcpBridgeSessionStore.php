@@ -34,17 +34,24 @@ class UcpBridgeSessionStore
         $this->caller = $caller;
     }
 
+    /** @return bool Session dans un état terminal interne. */
     public static function isTerminal($status)
     {
         return in_array($status, self::TERMINAL, true);
     }
 
+    /** @return bool Session réservée par une opération en cours. */
     public static function isBusy($status)
     {
         return in_array($status, self::BUSY, true);
     }
 
-    /** Statut UCP présenté à l'agent (les statuts internes deviennent des statuts de la spécification). */
+    /**
+     * Convertit un statut interne en statut UCP présenté à l'agent.
+     *
+     * @param string $status Statut interne de la session.
+     * @return string Statut défini par la spécification UCP.
+     */
     public static function exposedStatus($status)
     {
         $map = ['handed_off' => 'canceled', 'failed' => 'canceled', 'updating' => 'incomplete', 'reconciling' => 'complete_in_progress'];
@@ -55,6 +62,12 @@ class UcpBridgeSessionStore
     /**
      * Réservation atomique : passe la session de l'un des statuts $from au statut $to (une seule ligne modifiée exigée).
      * Optionnellement limitée aux sessions dont la dernière écriture est antérieure à $before (rapprochement).
+     *
+     * @param string $id Identifiant opaque de la session.
+     * @param list<string> $from Statuts autorisant la réservation.
+     * @param string $to Nouveau statut de réservation.
+     * @param string|null $before Date limite au format SQL pour le rapprochement.
+     * @return bool Une ligne a été réservée.
      */
     public function reserve($id, array $from, $to, $before = null)
     {
@@ -66,6 +79,13 @@ class UcpBridgeSessionStore
         return 1 === (int) $db->Affected_Rows();
     }
 
+    /**
+     * Charge une session du type demandé et expire au besoin une session non réservée.
+     *
+     * @param string $id Identifiant opaque de la session.
+     * @param string $kind Type de session : cart ou checkout.
+     * @return array<string, mixed>|null Session décodée ou null si elle est absente.
+     */
     public function load($id, $kind)
     {
         $row = Db::getInstance()->getRow('SELECT * FROM `' . _DB_PREFIX_ . 'ucpbridge_session`
@@ -82,7 +102,12 @@ class UcpBridgeSessionStore
         return $row;
     }
 
-    /** Commande exposée par son identifiant opaque (ord_ + 24 caractères hexadécimaux), jamais par id_order. */
+    /**
+     * Charge une commande par sa référence opaque, jamais par id_order.
+     *
+     * @param string $ref Référence ord_ suivie de 24 caractères hexadécimaux.
+     * @return array<string, mixed>|null Session liée à la commande ou null.
+     */
     public function loadByOrderRef($ref)
     {
         if (!preg_match('/^ord_[a-f0-9]{24}$/', (string) $ref)) {
@@ -98,7 +123,9 @@ class UcpBridgeSessionStore
      * Enregistre la session. Sans $from : ne réécrit jamais une session réservée ou terminée (statuts LOCKED).
      * Avec $from : mise à jour conditionnelle (le statut en base doit être l'un de $from), atomique.
      *
-     * @return bool true si la ligne a été créée ou modifiée
+     * @param array<string, mixed> $s Session à enregistrer.
+     * @param list<string>|null $from Statuts de départ permis, ou null pour une écriture non réservée.
+     * @return bool Une ligne a été créée ou modifiée.
      */
     public function save(array $s, ?array $from = null)
     {

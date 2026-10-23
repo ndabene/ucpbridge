@@ -28,7 +28,7 @@ class UcpBridgeCheckoutCompletion
     private $status;
     /** @var UcpBridgeCheckoutView */
     private $view;
-    /** @var array|null débit réussi pas encore couvert par une commande (à rembourser en cas d'échec) */
+    /** @var array{transaction_id: string, amount: int, currency: string}|null Débit à rembourser si la commande échoue. */
     private $charged;
 
     public function __construct(Context $context, Ucpbridge $module, UcpBridgeCaller $caller, UcpBridgeSessionStore $store,
@@ -44,6 +44,13 @@ class UcpBridgeCheckoutCompletion
         $this->view = $view;
     }
 
+    /**
+     * Réserve la session avant le débit pour empêcher deux finalisations concurrentes.
+     *
+     * @param array<string, mixed> $s Session de caisse chargée depuis le stockage.
+     * @param array<string, mixed> $body Requête contenant les instruments de paiement.
+     * @return array{int, array<string, mixed>} Code HTTP et document de caisse UCP.
+     */
     public function completeCheckout(array $s, array $body)
     {
         if ('updating' === $s['status']) {
@@ -109,7 +116,12 @@ class UcpBridgeCheckoutCompletion
         }
     }
 
-    /** Sort de la réservation sans débit : statut recalculé, message à l'agent. */
+    /**
+     * Sort de la réservation sans débit : statut recalculé, message à l'agent.
+     *
+     * @param list<array<string, mixed>> $msgs Messages UCP à joindre à la réponse.
+     * @return array{int, array<string, mixed>} Code HTTP et document de caisse UCP.
+     */
     private function releaseWithoutCharge(array $s, Cart $cart, array $msgs)
     {
         unset($s['payload']['charge_started_at']);
@@ -124,6 +136,10 @@ class UcpBridgeCheckoutCompletion
      * Débit engagé au résultat inconnu (délai dépassé, connexion coupée, erreur 5xx, exception de l'adaptateur) : la
      * carte a pu être débitée. Jamais de retour à ready_for_complete : la session reste réservée avec la trace du débit
      * engagé (charge_started_at), et le rapprochement la classera en débit incertain, à vérifier chez le prestataire.
+     *
+     * @param string $providerName Nom du prestataire appelé.
+     * @param string $reason Motif de l'incertitude consigné dans le journal.
+     * @return array{int, array<string, mixed>} Code HTTP et document de caisse UCP.
      */
     private function chargeUnknown(array $s, $providerName, $reason)
     {
@@ -136,7 +152,12 @@ class UcpBridgeCheckoutCompletion
         return [200, $this->view->checkoutDoc($s)];
     }
 
-    /** Dans la réservation : contrôles, débit, création de la commande. */
+    /**
+     * Dans la réservation : contrôles, débit, création de la commande.
+     *
+     * @param array<string, mixed> $instr Instrument de paiement sélectionné.
+     * @return array{int, array<string, mixed>} Code HTTP et document de caisse UCP.
+     */
     private function chargeAndOrder(array $s, array $instr, UcpBridgePaymentProvider $provider)
     {
         $cart = new Cart((int) $s['id_cart']);
@@ -269,7 +290,14 @@ class UcpBridgeCheckoutCompletion
         return [200, $this->view->checkoutDoc($s)];
     }
 
-    /** Session terminée par une commande existante (finalisation normale, exception tardive ou rapprochement). */
+    /**
+     * Termine la session par une commande existante, y compris après une exception tardive ou un rapprochement.
+     *
+     * @param int $idOrder Identifiant de la commande PrestaShop.
+     * @param string $transactionId Référence du débit chez le prestataire.
+     * @param string $label Libellé du moyen de paiement.
+     * @return array<string, mixed> Session complétée et enregistrée.
+     */
     public function markCompleted(array $s, $idOrder, $transactionId, $label)
     {
         $s['id_order'] = (int) $idOrder;
@@ -287,6 +315,11 @@ class UcpBridgeCheckoutCompletion
      * Débit réussi mais commande absente : état terminal (jamais de retour à ready_for_complete), incident
      * journalisé, remboursement automatique par l'adaptateur. La réponse est enregistrée par l'idempotence.
      * Si une commande existe malgré tout sur le panier, rien n'est remboursé et la session est terminée par elle.
+     *
+     * @param array{transaction_id: string, amount: int, currency: string} $charged Débit déjà effectué.
+     * @param string $reason Cause de l'échec de création de commande.
+     * @param string $origin Étape ayant détecté l'incident.
+     * @return array{int, array<string, mixed>} Code HTTP et document de caisse UCP.
      */
     public function orderFailedAfterCharge(array $s, UcpBridgePaymentProvider $provider, array $charged, $reason, $origin = 'finalisation')
     {
