@@ -109,15 +109,21 @@ def test_reglages_enregistres_depuis_le_formulaire(navigateur, config_sauvegarde
 def test_plateformes_ajout_regeneration_suppression_par_l_interface(navigateur):
     page = navigateur
     try:
+        assert cle_api() not in page.content()
+        assert "********" in page.locator("#ucpbridge-api-keys").inner_text()
         page.fill("input[name=api_key_id]:not([type=hidden])", "bo-ui")
         page.fill("input[name=api_key_label]", "Plateforme BO")
         soumettre(page, "submitUcpbridgeApiKeyAdd")
         cle = cle_api("bo-ui")
         assert cle.startswith("ucpk_") and cle in page.content()
+        ouvrir_config(page)
+        assert cle not in page.content()
         ligne = "form:has(input[type=hidden][name=api_key_id][value=bo-ui])"
         soumettre(page, "submitUcpbridgeApiKeyRegen", ligne)
         nouvelle = cle_api("bo-ui")
         assert nouvelle.startswith("ucpk_") and nouvelle != cle and nouvelle in page.content()
+        ouvrir_config(page)
+        assert nouvelle not in page.content()
         soumettre(page, "submitUcpbridgeApiKeyDelete", ligne)
         assert cle_api("bo-ui") == ""
         assert page.locator(ligne).count() == 0

@@ -3,6 +3,7 @@
   <h3><i class="icon-key"></i> Plateformes (clés API, en-tête Authorization: Bearer)</h3>
   <p>Une clé par plateforme : chaque plateforme ne voit que ses propres paniers, sessions de caisse et commandes, et ses clés
     d'idempotence ne se mélangent pas à celles des autres. Ne jamais remettre la même clé à deux plateformes.</p>
+  <p>Copiez la clé lors de sa création ou régénération : elle ne sera plus affichée ensuite. Si elle est perdue, régénérez-la.</p>
   {if $ucp_keys}
     <table class="table">
       <thead><tr><th>Identifiant</th><th>Plateforme</th><th>Clé API</th><th>Créée le</th><th></th></tr></thead>
@@ -11,7 +12,7 @@
         <tr>
           <td><code>{$id|escape:'html':'UTF-8'}</code></td>
           <td>{if isset($k.label)}{$k.label|escape:'html':'UTF-8'}{/if}</td>
-          <td><code>{if isset($k.key)}{$k.key|escape:'html':'UTF-8'}{/if}</code></td>
+          <td><code>********</code></td>
           <td>{if isset($k.date_add)}{$k.date_add|escape:'html':'UTF-8'}{/if}</td>
           <td class="text-right">
             <form method="post" class="form-inline">
