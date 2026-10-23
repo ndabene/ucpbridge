@@ -28,7 +28,12 @@ class UcpBridgeOrderView
         $this->view = $view;
     }
 
-    /** @return array [code HTTP, document] */
+    /**
+     * Expose une commande uniquement à l'appelant propriétaire de sa session.
+     *
+     * @param string $ref Référence opaque de commande UCP.
+     * @return array{int, array<string, mixed>} Code HTTP et document de commande ou d'erreur UCP.
+     */
     public function orderDoc($ref)
     {
         $s = $this->store->loadByOrderRef($ref);

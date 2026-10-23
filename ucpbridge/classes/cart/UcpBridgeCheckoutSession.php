@@ -50,6 +50,12 @@ class UcpBridgeCheckoutSession
         return UcpBridgeMessage::errorDoc($messages, $capabilities, Ucpbridge::UCP_VERSION, $this->context->link->getPageLink('index', true));
     }
 
+    /**
+     * Crée une session de caisse depuis les lignes demandées ou un panier UCP existant.
+     *
+     * @param array<string, mixed> $body Corps de la requête UCP.
+     * @return array{int, array<string, mixed>} Code HTTP et document de caisse UCP.
+     */
     public function createCheckout(array $body)
     {
         $lineItems = $body['line_items'] ?? null;
@@ -95,6 +101,13 @@ class UcpBridgeCheckoutSession
         return [201, $this->view->checkoutDoc($s, $msgs)];
     }
 
+    /**
+     * Applique une mise à jour de caisse sous réservation de session.
+     *
+     * @param array<string, mixed> $s Session de caisse courante.
+     * @param array<string, mixed> $body Corps de la requête UCP.
+     * @return array{int, array<string, mixed>} Code HTTP et document de caisse UCP.
+     */
     public function updateCheckout(array $s, array $body)
     {
         if (UcpBridgeSessionStore::isTerminal($s['status'])) {
@@ -127,7 +140,14 @@ class UcpBridgeCheckoutSession
         return [200, $this->view->checkoutDoc($s, $msgs)];
     }
 
-    /** Applique line_items, buyer et fulfillment. Retourne les messages d'erreur de saisie. */
+    /**
+     * Applique line_items, buyer et fulfillment à la session et au panier.
+     *
+     * @param array<string, mixed> $s Session modifiée par référence.
+     * @param array<string, mixed> $body Champs UCP à appliquer.
+     * @param bool $replaceLines Remplace toutes les lignes lorsque ce drapeau est actif.
+     * @return list<array<string, mixed>> Messages d'erreur de saisie UCP.
+     */
     private function applyUpdate(array &$s, Cart $cart, array $body, $replaceLines)
     {
         $msgs = [];
@@ -194,7 +214,14 @@ class UcpBridgeCheckoutSession
         return $msgs;
     }
 
-    /** Acceptation des CGV sur la page du module : date, version, IP ; la session redevient finalisable. */
+    /**
+     * Enregistre l'acceptation des CGV sur la page du module et recalcule l'état de la caisse.
+     *
+     * @param array<string, mixed> $s Session de caisse courante.
+     * @param string $ip Adresse IP de l'acheteur.
+     * @param string $userAgent Agent utilisateur de l'acheteur.
+     * @return array<string, mixed> Session mise à jour et enregistrée.
+     */
     public function acceptTerms(array $s, $ip, $userAgent)
     {
         $t = $this->module->termsInfo();
@@ -213,6 +240,12 @@ class UcpBridgeCheckoutSession
         return $s;
     }
 
+    /**
+     * Annule une session de caisse selon son état courant.
+     *
+     * @param array<string, mixed> $s Session de caisse courante.
+     * @return array{int, array<string, mixed>} Code HTTP et document de caisse UCP.
+     */
     public function cancelCheckout(array $s)
     {
         if (!in_array($s['status'], UcpBridgeSessionStore::LOCKED, true)) {

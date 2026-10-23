@@ -32,12 +32,20 @@ class UcpBridgeCheckoutView
         $this->status = $status;
     }
 
+    /** @return array<string, mixed> Enveloppe UCP et gestionnaires de paiement disponibles. */
     public function checkoutEnvelope()
     {
         return UcpBridgeMessage::envelope(['dev.ucp.shopping.checkout', 'dev.ucp.shopping.fulfillment', 'dev.ucp.shopping.discount'],
             Ucpbridge::UCP_VERSION, UcpBridgePaymentRegistry::get()->handlers());
     }
 
+    /**
+     * Construit la représentation UCP de la caisse à partir du panier et de la session.
+     *
+     * @param array<string, mixed> $s Session de caisse.
+     * @param list<array<string, mixed>> $extraMsgs Messages UCP à joindre au document.
+     * @return array<string, mixed> Document de caisse UCP.
+     */
     public function checkoutDoc(array $s, array $extraMsgs = [])
     {
         $cart = new Cart((int) $s['id_cart']);
@@ -112,7 +120,11 @@ class UcpBridgeCheckoutView
         return $doc;
     }
 
-    /** Totaux cohérents (somme des lignes = total) : sous-total HT, réductions HT, livraison HT, TVA, total TTC. */
+    /**
+     * Totaux cohérents (somme des lignes = total) : HT, réductions, livraison, TVA et TTC.
+     *
+     * @return list<array{type: string, amount: int, display_text: string}> Totaux en centimes.
+     */
     public function checkoutTotals(array $s, Cart $cart)
     {
         $hasCarrier = !empty($s['payload']['id_carrier']);
@@ -128,7 +140,11 @@ class UcpBridgeCheckoutView
         );
     }
 
-    /** Messages des états terminaux internes : lien de reprise ouvert, commande impossible après débit. */
+    /**
+     * Messages des états terminaux internes : reprise ouverte ou commande impossible après débit.
+     *
+     * @return list<array<string, mixed>> Messages UCP destinés à l'agent.
+     */
     public function terminalMessages(array $s)
     {
         if ('handed_off' === $s['status']) {
@@ -152,7 +168,12 @@ class UcpBridgeCheckoutView
         return $m;
     }
 
-    /** Mentions obligatoires (presentation « disclosure ») pour le pays de livraison. */
+    /**
+     * Mentions obligatoires pour le pays de livraison.
+     *
+     * @param string|null $iso Code ISO du pays ou null pour le pays de la boutique.
+     * @return list<array<string, mixed>> Messages UCP de type disclosure.
+     */
     public function disclosures($iso)
     {
         $d = $this->module->withdrawalDisclosure(is_string($iso) ? $iso : null);
@@ -160,12 +181,20 @@ class UcpBridgeCheckoutView
         return $d ? [$d] : [];
     }
 
-    /** Liens légaux construits depuis les pages CMS configurées (titres en langue de la boutique). */
+    /**
+     * Liens légaux des pages CMS configurées, avec titres dans la langue de la boutique.
+     *
+     * @return list<array<string, mixed>> Liens légaux UCP.
+     */
     public function links()
     {
         return $this->module->legalLinks();
     }
 
+    /**
+     * @param int $idOrder Identifiant de commande PrestaShop.
+     * @return string URL de suivi de la commande destinée à l'acheteur.
+     */
     public function orderPermalink($idOrder)
     {
         $o = new Order((int) $idOrder);
