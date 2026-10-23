@@ -23,7 +23,11 @@ class UcpBridgeConfigPage
         $this->context = $context;
     }
 
-    /** Page complète : comptes rendus des envois traités, puis formulaires et listes. */
+    /**
+     * Rend la page complète après traitement des envois : comptes rendus, formulaires et listes.
+     *
+     * @return string HTML de la page de configuration.
+     */
     public function content()
     {
         $out = $this->process();
@@ -33,11 +37,13 @@ class UcpBridgeConfigPage
 
     /* ============================== Jeton anti-CSRF ============================== */
 
+    /** @return string Jeton anti-CSRF lié à l'employé connecté et au secret du module. */
     public function token()
     {
         return hash_hmac('sha256', 'bo-config|' . (int) $this->context->employee->id, (string) Configuration::get('UCPBRIDGE_LINK_SECRET'));
     }
 
+    /** @return bool Jeton reçu conforme à celui de l'employé connecté. */
     private function tokenValid()
     {
         return hash_equals($this->token(), (string) Tools::getValue('ucp_csrf'));
@@ -45,6 +51,7 @@ class UcpBridgeConfigPage
 
     /* ================================ Traitement ================================ */
 
+    /** @return string Messages HTML issus des actions soumises. */
     private function process()
     {
         $out = '';
@@ -188,7 +195,11 @@ class UcpBridgeConfigPage
         return $this->module->displayConfirmation('Configuration enregistrée.');
     }
 
-    /** Envoie le CSV des preuves et rétractations et termine la requête. */
+    /**
+     * Envoie le CSV des preuves et rétractations et termine la requête.
+     *
+     * @return never
+     */
     private function sendExport()
     {
         while (ob_get_level()) {
@@ -205,6 +216,7 @@ class UcpBridgeConfigPage
 
     /* ================================== Rendu ================================== */
 
+    /** @return string HTML des présentations, formulaires et listes. */
     private function render()
     {
         $base = $this->context->link->getBaseLink();
@@ -229,14 +241,24 @@ class UcpBridgeConfigPage
             . $this->reconcileForm();
     }
 
-    /** Lien de téléchargement de l'export CSV (même page, jeton anti-CSRF du module). */
+    /**
+     * Lien de téléchargement de l'export CSV (même page, jeton anti-CSRF du module).
+     *
+     * @return string URL d'administration de l'export.
+     */
     private function exportUrl()
     {
         return $this->context->link->getAdminLink('AdminModules', true, [], ['configure' => $this->module->name,
             'ucpbridge_export' => 'proofs', 'ucp_csrf' => $this->token()]);
     }
 
-    /** Gabarit Smarty de views/templates/admin/. */
+    /**
+     * Rend un gabarit Smarty de views/templates/admin/.
+     *
+     * @param string $template Nom du gabarit.
+     * @param array<string, mixed> $vars Variables transmises à Smarty.
+     * @return string HTML rendu.
+     */
     private function fetch($template, array $vars)
     {
         return $this->module->renderTemplate('admin/' . $template, $vars);
@@ -245,6 +267,12 @@ class UcpBridgeConfigPage
     /**
      * Formulaire HelperForm : un formulaire HTML par appel (les boutons d'un formulaire ne soumettent jamais les champs
      * d'un autre). Le jeton anti-CSRF du module est ajouté en champ caché.
+     *
+     * @param string $id Identifiant HTML du formulaire.
+     * @param string $submitAction Nom de l'action de soumission.
+     * @param list<array<string, mixed>> $fieldsets Définitions des champs pour HelperForm.
+     * @param array<string, mixed> $values Valeurs initiales des champs.
+     * @return string HTML du formulaire généré par PrestaShop.
      */
     private function form($id, $submitAction, array $fieldsets, array $values)
     {
